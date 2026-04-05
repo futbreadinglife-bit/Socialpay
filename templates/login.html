@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1440b0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>{{ t('login') }} - SocialPay</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* PWA Install Banner */
+    .pwa-banner {
+      position: fixed; inset: 0; z-index: 9990;
+      background: rgba(10,18,42,0.75);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+      backdrop-filter: blur(6px);
+    }
+    .pwa-banner.show { opacity: 1; pointer-events: all; }
+    .pwa-sheet {
+      background: white; border-radius: 28px 28px 0 0;
+      width: 100%; max-width: 480px; margin: 0 auto;
+      padding: 8px 24px 48px;
+      transform: translateY(100%);
+      transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    .pwa-banner.show .pwa-sheet { transform: translateY(0); }
+    .pwa-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 14px auto 22px; }
+    .pwa-icon-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .pwa-app-icon { width: 72px; height: 72px; border-radius: 20px; background: var(--grad-brand); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; color: white; box-shadow: 0 8px 24px rgba(20,64,176,.3); flex-shrink: 0; }
+    .pwa-app-name { font-size: 20px; font-weight: 900; }
+    .pwa-app-sub  { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .pwa-steps { background: var(--bg); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+    .pwa-step { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+    .pwa-step:last-child { border-bottom: none; }
+    .pwa-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-500); color: white; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pwa-ios-hint { background: var(--yellow-bg); border: 1.5px solid var(--yellow); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; color: #92400e; display: none; }
+  </style>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-hero">
+    <div class="auth-logo">Social<span>Pay</span></div>
+    <div class="auth-tagline">{{ t('tagline') }}</div>
+    <div class="auth-badges">
+      <span class="auth-badge-item">💰 Earn Online</span>
+      <span class="auth-badge-item">📱 Mobile App</span>
+      <span class="auth-badge-item">🚀 Instant Pay</span>
+    </div>
+    <div class="lang-bar" style="margin-top:18px">
+      <a href="/set_lang/en" class="lang-btn {{ 'active' if lang == 'en' else '' }}">🇬🇧 EN</a>
+      <a href="/set_lang/ar" class="lang-btn {{ 'active' if lang == 'ar' else '' }}">🇸🇦 عربي</a>
+      <a href="/set_lang/ha" class="lang-btn {{ 'active' if lang == 'ha' else '' }}">🇳🇬 Hausa</a>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab {{ 'active' if tab != 'register' else '' }}" id="tab-login" onclick="switchTab('login')">{{ t('login') }}</button>
+      <button class="auth-tab {{ 'active' if tab == 'register' else '' }}" id="tab-reg" onclick="switchTab('register')">{{ t('register') }}</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="form-login" style="{{ 'display:none' if tab == 'register' else '' }}">
+      <div class="form-group">
+        <label class="form-label">{{ t('email') }}</label>
+        <input type="email" class="form-control" id="l-email" placeholder="example@gmail.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t('password') }}</label>
+        <div class="input-wrap">
+          <input type="password" class="form-control" id="l-pw" placeholder="••••••••" autocomplete="current-password">
+          <button class="input-suffix" onclick="togglePw('l-pw',this)">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="login-btn" onclick="doLogin()">🚀 {{ t('login_now') }}</button>
+      <p style="text-align:center;margin-top:18px;font-size:13px;color:var(--muted)">
+        Don't have an account? <a href="#" onclick="switchTab('register');return false" style="color:var(--accent);font-weight:700">Register →</a>
+      </p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="form-reg" style="{{ '' if tab == 'register' else 'display:none' }}">
+      <div class="form-group">
+        <label class="form-label">{{ t('full_name') }}</label>
+        <input type="text" class="form-control" id="r-name" placeholder="John Doe" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t('email') }}</label>
+        <input type="email" class="form-control" id="r-email" placeholder="example@gmail.com" autocomplete="email"
+          value="{{ request.args.get('email','') }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t('password') }}</label>
+        <div class="input-wrap">
+          <input type="password" class="form-control" id="r-pw" placeholder="Min 6 characters" autocomplete="new-password">
+          <button class="input-suffix" onclick="togglePw('r-pw',this)">👁️</button>
+        </div>
+      </div>
+      {% if request.args.get('ref') %}
+      <div class="alert alert-success">🎁 You were invited! Referral bonus applies.</div>
+      <input type="hidden" id="r-ref" value="{{ request.args.get('ref','') }}">
+      {% else %}
+      <div class="form-group">
+        <label class="form-label">{{ t('referral_code') }}</label>
+        <input type="text" class="form-control" id="r-ref" placeholder="SP12345678">
+      </div>
+      {% endif %}
+      <button class="btn btn-primary btn-block" id="reg-btn" onclick="doRegister()">✨ {{ t('create_account') }}</button>
+      <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted)">
+        Already have an account? <a href="#" onclick="switchTab('login');return false" style="color:var(--accent);font-weight:700">← Login</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIGN-UP BONUS POPUP ===== -->
+<div class="pwa-banner" id="bonusPopup" style="z-index:9995">
+  <div class="pwa-sheet" style="text-align:center;padding:8px 24px 48px">
+    <div class="pwa-handle"></div>
+    <div style="font-size:72px;margin:10px 0 4px;animation:float 2s ease-in-out infinite">🎁</div>
+    <div style="font-size:22px;font-weight:900;color:var(--brand-600);margin-bottom:6px">Welcome Bonus!</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px">You have received a sign-up reward</div>
+    <div style="background:var(--grad-brand);border-radius:20px;padding:22px;margin-bottom:22px;box-shadow:var(--shadow-brand)">
+      <div style="font-size:13px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Bonus Added to Wallet</div>
+      <div id="bonusAmount" style="font-size:44px;font-weight:900;color:white;letter-spacing:-1px">₦0.00</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px">Available in your wallet now ✅</div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="claimBonusAndContinue()" style="font-size:16px;padding:16px">
+      🚀 Go to Dashboard
+    </button>
+  </div>
+</div>
+
+<!-- ===== PWA INSTALL BANNER ===== -->
+<div class="pwa-banner" id="pwaBanner">
+  <div class="pwa-sheet">
+    <div class="pwa-handle"></div>
+    <div class="pwa-icon-row">
+      <div class="pwa-app-icon">SP</div>
+      <div>
+        <div class="pwa-app-name">SocialPay</div>
+        <div class="pwa-app-sub">Add to your Home Screen</div>
+      </div>
+    </div>
+
+    <!-- iOS hint (shown only on iOS) -->
+    <div class="pwa-ios-hint" id="iosHint">
+      📱 <strong>iOS users:</strong> Tap the <strong>Share</strong> button (⎋) in Safari, then choose <strong>"Add to Home Screen"</strong>.
+    </div>
+
+    <div class="pwa-steps" id="installSteps">
+      <div class="pwa-step"><div class="pwa-step-num">1</div><span>Tap the button below to install</span></div>
+      <div class="pwa-step"><div class="pwa-step-num">2</div><span>SocialPay opens like a real app</span></div>
+      <div class="pwa-step"><div class="pwa-step-num">3</div><span>No App Store needed — instant install!</span></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="pwaInstallBtn" onclick="triggerInstall()" style="margin-bottom:10px">
+      📲 Install App — Add to Home Screen
+    </button>
+    <button class="btn btn-outline btn-block" onclick="dismissPwa()">
+      Maybe Later
+    </button>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script>
+// ── Tab switching ──
+function switchTab(t) {
+  document.getElementById('form-login').style.display = t==='login'?'':'none';
+  document.getElementById('form-reg').style.display = t==='register'?'':'none';
+  document.getElementById('tab-login').classList.toggle('active',t==='login');
+  document.getElementById('tab-reg').classList.toggle('active',t==='register');
+}
+
+// ── Login ──
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pw = document.getElementById('l-pw').value;
+  if (!email||!pw){ showToast('{{ t("fill_all_fields") }}','warning'); return; }
+  const fd = new FormData();
+  fd.append('email',email); fd.append('password',pw);
+  await postForm('/login', fd, document.getElementById('login-btn'));
+}
+
+// ── Register (shows install prompt on success) ──
+async function doRegister() {
+  const name = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const pw = document.getElementById('r-pw').value;
+  const ref = document.getElementById('r-ref')?.value.trim()||'';
+  if(!name||!email||!pw){ showToast('{{ t("fill_all_fields") }}','warning'); return; }
+  const btn = document.getElementById('reg-btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creating account...';
+  try {
+    const fd = new FormData();
+    fd.append('name',name); fd.append('email',email);
+    fd.append('password',pw); fd.append('ref',ref);
+    const res = await fetch('/register', { method:'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      // Show signup bonus popup if reward was given
+      if (data.signup_bonus && data.signup_bonus > 0) {
+        showBonusPopup(data.signup_bonus, () => {
+          showPwaBanner(() => { location.href = data.redirect || '/dashboard'; });
+        });
+      } else {
+        showToast(data.message || 'Account created! Welcome 🎉', 'success');
+        setTimeout(() => {
+          showPwaBanner(() => { location.href = data.redirect || '/dashboard'; });
+        }, 600);
+      }
+    } else {
+      showToast(data.message || 'Error', 'error');
+    }
+  } catch(e) {
+    showToast('Network error. Check your connection.','error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+}
+
+function showBonusPopup(amount, callback) {
+  const popup = document.getElementById('bonusPopup');
+  const amountEl = document.getElementById('bonusAmount');
+  if (amountEl) amountEl.textContent = '₦' + parseFloat(amount).toLocaleString('en-NG', {minimumFractionDigits:2});
+  if (popup) {
+    popup.classList.add('show');
+    // Auto-proceed after 4s or on button click
+    window._bonusCb = callback;
+  } else {
+    if (callback) callback();
+  }
+}
+function claimBonusAndContinue() {
+  const popup = document.getElementById('bonusPopup');
+  if (popup) popup.classList.remove('show');
+  if (window._bonusCb) setTimeout(window._bonusCb, 400);
+}
+
+// ── PWA Install Logic ──
+let deferredPrompt = null;
+let afterInstallCb = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  console.log('[PWA] Install prompt captured');
+});
+
+function showPwaBanner(callback) {
+  afterInstallCb = callback || null;
+  const banner = document.getElementById('pwaBanner');
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    document.getElementById('iosHint').style.display = 'block';
+    document.getElementById('installSteps').style.display = 'none';
+    document.getElementById('pwaInstallBtn').textContent = '📲 Got it! (Use Safari Share →)';
+  }
+  banner.classList.add('show');
+}
+
+function dismissPwa() {
+  document.getElementById('pwaBanner').classList.remove('show');
+  localStorage.setItem('sp_pwa_dismissed', '1');
+  if (afterInstallCb) setTimeout(afterInstallCb, 400);
+}
+
+async function triggerInstall() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (outcome === 'accepted') {
+      showToast('🎉 App installed successfully!', 'success');
+    }
+    dismissPwa();
+  } else if (isIOS) {
+    showToast('Tap Share (⎋) → "Add to Home Screen" in Safari', 'info');
+    setTimeout(dismissPwa, 3000);
+  } else {
+    showToast('App already installed or not supported in this browser', 'info');
+    dismissPwa();
+  }
+}
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+    .then(() => console.log('[SW] Registered'))
+    .catch(e => console.warn('[SW] Registration failed:', e));
+}
+</script>
+</body>
+</html>
