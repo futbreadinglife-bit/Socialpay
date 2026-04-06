@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Detail - Admin</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="admin-header">
+  <div class="admin-logo">Social<span>Pay</span> Admin</div>
+  <a href="/admin/users" style="color:white;font-size:13px;font-weight:700;text-decoration:none">← Users</a>
+</div>
+<div class="admin-content" style="padding-top:20px">
+  <!-- USER PROFILE -->
+  <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--primary-2));color:white;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800">{{ user.name[0]|upper }}</div>
+      <div>
+        <div style="font-size:18px;font-weight:800">{{ user.name }}</div>
+        <div style="opacity:0.8;font-size:13px">{{ user.email }}</div>
+        <div style="font-size:11px;opacity:0.65;margin-top:3px">ID: {{ user_id }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      {% if user.banned %}<span class="badge" style="background:rgba(239,35,60,0.4);color:white">⛔ Banned</span>{% else %}<span class="badge" style="background:rgba(6,214,160,0.3);color:white">✅ Active</span>{% endif %}
+      {% if user.is_admin %}<span class="badge" style="background:rgba(255,209,102,0.3);color:white">👑 {{ user.get('role','admin')|title }}</span>{% endif %}
+      {% if user.verified %}<span class="badge" style="background:rgba(62,146,204,0.3);color:white">✓ Verified</span>{% endif %}
+    </div>
+  </div>
+
+  <!-- WALLET -->
+  <div class="admin-stats" style="margin-bottom:16px">
+    <div class="admin-stat-card"><div class="admin-stat-val" style="color:var(--green)">₦{{ "%.2f"|format(wallet.get('naira',0)) }}</div><div class="admin-stat-lbl">Naira Balance</div></div>
+    <div class="admin-stat-card"><div class="admin-stat-val">${{ "%.4f"|format(wallet.get('dollar',0)) }}</div><div class="admin-stat-lbl">Dollar Balance</div></div>
+    <div class="admin-stat-card"><div class="admin-stat-val">{{ wallet.get('completed_tasks',0) }}</div><div class="admin-stat-lbl">Tasks Done</div></div>
+    <div class="admin-stat-card"><div class="admin-stat-val">{{ wallet.get('referral_count',0) }}</div><div class="admin-stat-lbl">Referrals</div></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:14px">⚡ Quick Actions</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      {% if not user.banned %}
+      <button class="btn btn-danger btn-sm" onclick="doAction('ban')">⛔ Ban User</button>
+      {% else %}
+      <button class="btn btn-success btn-sm" onclick="doAction('unban')">✅ Unban User</button>
+      {% endif %}
+      <button class="btn btn-outline btn-sm" onclick="doAction('reset_pin')">🔐 Reset PIN</button>
+      {% if my_role=='super_admin' %}
+        {% if not user.is_admin %}
+        <button class="btn btn-warning btn-sm" onclick="doAction('make_admin')">👑 Make Admin</button>
+        {% elif user.get('role') != 'super_admin' %}
+        <button class="btn btn-outline btn-sm" onclick="doAction('remove_admin')">🚫 Remove Admin</button>
+        {% endif %}
+        {% if user.get('role') != 'super_admin' %}
+        <button class="btn btn-danger btn-sm" onclick="deleteUser()" style="margin-top:8px">🗑️ Delete User</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ADJUST BALANCE -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:14px">💰 Adjust Balance</div>
+    <div class="form-group"><label class="form-label">Currency</label>
+      <select class="form-control" id="adj-curr"><option value="naira">Naira (₦)</option><option value="dollar">Dollar ($)</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Mode</label>
+      <select class="form-control" id="adj-mode"><option value="add">Add</option><option value="deduct">Deduct</option><option value="set">Set Exact</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Amount</label><input type="number" class="form-control" id="adj-amt" placeholder="0.00"></div>
+    <button class="btn btn-primary btn-sm" onclick="adjustBalance()">Apply Balance Change</button>
+  </div>
+
+  <!-- SEND MESSAGE -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px">📩 Send Message to User</div>
+    <div class="form-group"><input type="text" class="form-control" id="msg-inp" placeholder="Type your message..."></div>
+    <button class="btn btn-outline btn-sm" onclick="sendMsg()">Send Message</button>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  {% if transactions %}
+  <div style="font-size:14px;font-weight:800;margin-bottom:10px">💳 Recent Transactions</div>
+  <div class="card" style="padding:0;margin-bottom:16px">
+    {% for tx in transactions %}
+    <div class="tx-item">
+      <div class="tx-icon {{ tx.type }}">{{ '💚' if tx.type=='credit' else '🔴' }}</div>
+      <div class="tx-info"><div class="tx-desc">{{ tx.description }}</div><div class="tx-time">{{ tx.time[:16].replace('T',' ') }}</div></div>
+      <div class="tx-amount {{ tx.type }}">{{ '+' if tx.type=='credit' else '-' }}₦{{ "%.2f"|format(tx.amount) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- BANK INFO -->
+  {% if bank %}
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px">🏦 Bank Details</div>
+    <div style="font-size:13px;line-height:2">
+      <strong>Type:</strong> {{ bank.type|title }}<br>
+      <strong>Bank:</strong> {{ bank.bank_name }}<br>
+      <strong>Account:</strong> {{ bank.account_number }}<br>
+      <strong>Name:</strong> {{ bank.account_name }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SUBMISSIONS -->
+  {% if submissions %}
+  <div style="font-size:14px;font-weight:800;margin-bottom:10px">📝 Recent Submissions</div>
+  <div class="card" style="padding:0;margin-bottom:16px">
+    {% for s in submissions %}
+    <div class="list-item" style="cursor:default">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">Task {{ s.task_id }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ s.submitted_at[:10] }}</div>
+      </div>
+      <span class="badge {% if s.status=='approved' %}badge-success{% elif s.status=='rejected' %}badge-error{% else %}badge-warning{% endif %}">{{ s.status }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/app.js"></script>
+<script>
+const USER_ID = '{{ user_id }}';
+async function doAction(action) {
+  const fd=new FormData(); fd.append('action',action); fd.append('user_id',USER_ID);
+  const r=await postForm('/admin/user/action',fd,null);
+  if(r?.success) setTimeout(()=>location.reload(),1200);
+}
+async function adjustBalance() {
+  const fd=new FormData(); fd.append('action','adjust_balance'); fd.append('user_id',USER_ID);
+  fd.append('currency',document.getElementById('adj-curr').value);
+  fd.append('mode',document.getElementById('adj-mode').value);
+  fd.append('amount',document.getElementById('adj-amt').value);
+  const r=await postForm('/admin/user/action',fd,null);
+  if(r?.success) setTimeout(()=>location.reload(),1200);
+}
+async function sendMsg() {
+  const msg=document.getElementById('msg-inp').value.trim(); if(!msg) return;
+  const fd=new FormData(); fd.append('action','message'); fd.append('user_id',USER_ID); fd.append('message',msg);
+  const r=await postForm('/admin/user/action',fd,null);
+  if(r?.success) { document.getElementById('msg-inp').value=''; }
+}
+async function deleteUser() {
+  if(!confirm('⚠️ DELETE this user and ALL their data permanently?\n\nThis cannot be undone!')) return;
+  if(!confirm('Are you 100% sure? This will delete the user, wallet, transactions, referrals etc.')) return;
+  const fd=new FormData(); fd.append('action','delete_user'); fd.append('user_id',USER_ID);
+  const r=await postForm('/admin/user/action',fd,null);
+  if(r?.success) setTimeout(()=>location.href='/admin/users',800);
+}
+</script>
+</body>
+</html>
